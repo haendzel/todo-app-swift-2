@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: UITableViewController, UIGestureRecognizerDelegate {
     
     var todoItems : Results<Item>?
     
@@ -24,7 +24,11 @@ class TodoListViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
+        longPressGesture.minimumPressDuration = 1;
+        self.tableView.addGestureRecognizer(longPressGesture)
+        
+        //print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
 
         
     }
@@ -62,10 +66,32 @@ class TodoListViewController: UITableViewController {
         // todoItems[indexPath.row].done = !todoItems[indexPath.row].done
 
         //saveItems()
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    item.done = !item.done
+                }
+            } catch {
+                print("Error saving done status! \(error)")
+            }
+        }
+        
+        tableView.reloadData()
         
         tableView.deselectRow(at: indexPath, animated: true)
         
     }
+    
+//    func remove(item: Item) {
+//        do {
+//            try! realm.write {
+//            realm.add(item)
+//        }
+//        } catch {
+//            print("Error saving context \(error)")
+//        }
+//            self.tableView.reloadData()
+//        }
     
     //MARK: - Add New Items
     
@@ -142,6 +168,28 @@ class TodoListViewController: UITableViewController {
 
         tableView.reloadData()
 
+    }
+    
+    //MARK: Handle long gesture
+    
+    @objc func handleLongPress(longPressGesture: UILongPressGestureRecognizer) {
+        let p = longPressGesture.location(in: self.tableView)
+        let indexPath = self.tableView.indexPathForRow(at: p)
+        if indexPath == nil {
+            print("Long press on table view, not row.")
+        } else if longPressGesture.state == UIGestureRecognizer.State.began {
+            print("Long press on row, at \(indexPath!.row)")
+            if let item = todoItems?[indexPath!.row] {
+                do {
+                    try realm.write {
+                        realm.delete(item)
+                    }
+                } catch {
+                    print("Error saving done status! \(error)")
+                }
+            }
+            tableView.reloadData()
+        }
     }
     
 }
